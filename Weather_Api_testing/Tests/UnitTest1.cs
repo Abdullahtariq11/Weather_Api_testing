@@ -8,9 +8,10 @@ using System.Threading.Tasks;
 using RestSharp;
 using RestSharp.Extensions;
 using System.Net;
-
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using AventStack.ExtentReports;
+using AventStack.ExtentReports.Reporter;
 
 namespace Weather_Api_testing
 {
@@ -25,6 +26,11 @@ namespace Weather_Api_testing
         private string _filePathInvalid = "C:/Users/abdul/Documents/Study/Software tessting/API Testing/New folder/Weather Api testing/Weather_Api_testing/Weather_Api_testing/Test Data/city_data-Invalid.csv";
         List<string> csvData = new List<string>();
         List<string> csvDataInvalid = new List<string>();
+
+        private ExtentReports extent;
+        private ExtentTest test;
+
+
 
         [OneTimeSetUp] 
         public void intializeCLient ()=> _client = new RestClient (_url);
@@ -78,14 +84,32 @@ namespace Weather_Api_testing
             }
         }
 
+        [OneTimeSetUp]
+        public void InitializeReport()
+        {
+            string reportPath = "C:/Users/abdul/Documents/Study/Software tessting/API Testing/New folder/Weather Api testing/Weather_Api_testing/Weather_Api_testing/test_report.html";
+            var htmlReporter = new ExtentHtmlReporter(reportPath);
+            extent = new ExtentReports();
+            extent.AttachReporter(htmlReporter);
+        }
+
         [Test]
         public void CheckGetWeatherData()
         {
-            var request = new RestRequest(_urlpath).AddQueryParameter("key", _ApiKey).AddQueryParameter("q","karachi");
-            var repsonse = _client.ExecuteGetAsync(request);
-            Assert.AreEqual(HttpStatusCode.OK, repsonse.Result.StatusCode);
-
-            Console.WriteLine(JToken.Parse(repsonse.Result.Content).SelectToken("current").SelectToken("temp_c"));
+            test = extent.CreateTest("checkGerWeatherData");
+            try
+            {
+                var request = new RestRequest(_urlpath).AddQueryParameter("key", _ApiKey).AddQueryParameter("q", "karachi");
+                var repsonse = _client.ExecuteGetAsync(request);
+                Assert.AreEqual(HttpStatusCode.OK, repsonse.Result.StatusCode);
+                Console.WriteLine(JToken.Parse(repsonse.Result.Content).SelectToken("current").SelectToken("temp_c"));
+                test.Pass("Test passed");
+            }
+            catch (Exception ex)
+            {
+                test.Fail("Test failed");
+                test.Error(ex);
+            }
 
 
         }
@@ -99,10 +123,21 @@ namespace Weather_Api_testing
             {
                 if (data != null)
                 {
-                    var request = new RestRequest(_urlpath).AddQueryParameter("key", _ApiKey).AddQueryParameter("q", data);
-                    var repsonse = _client.ExecuteGetAsync(request);
-                    Assert.AreEqual(HttpStatusCode.OK, repsonse.Result.StatusCode);
-                    Console.WriteLine(data);
+                    test = extent.CreateTest("CheckWithCorrectData - " + data);
+                    try
+                    {
+
+                        var request = new RestRequest(_urlpath).AddQueryParameter("key", _ApiKey).AddQueryParameter("q", data);
+                        var repsonse = _client.ExecuteGetAsync(request);
+                        Assert.AreEqual(HttpStatusCode.OK, repsonse.Result.StatusCode);
+                        Console.WriteLine(data);
+                        test.Pass("Test passed");
+                    }
+                    catch (Exception ex)
+                    {
+                        test.Fail("Test failed");
+                        test.Error(ex);
+                    }
                 }
             }
             
@@ -115,10 +150,22 @@ namespace Weather_Api_testing
             GetinvalidData();
             foreach (string data in csvDataInvalid)
             {
-                var request = new RestRequest(_urlpath).AddQueryParameter("key", _ApiKey).AddQueryParameter("q", data);
-                var response = _client.ExecuteGetAsync(request);
-                Assert.AreEqual(HttpStatusCode.BadRequest, response.Result.StatusCode);
-                Console.WriteLine(response.Result.Content);
+                test = extent.CreateTest("CheckWithInvalidData - " + data);
+
+                try
+                {
+                    var request = new RestRequest(_urlpath).AddQueryParameter("key", _ApiKey).AddQueryParameter("q", data);
+                    var response = _client.ExecuteGetAsync(request);
+                    Assert.AreEqual(HttpStatusCode.BadRequest, response.Result.StatusCode);
+                    Console.WriteLine(response.Result.Content);
+                    test.Pass("Test passed");
+                }
+                catch(Exception ex)
+                {
+                    test.Fail("Test failed");
+                    test.Error(ex);
+                }
+
             }
         }
 
@@ -126,20 +173,55 @@ namespace Weather_Api_testing
 
         public void CheckWithInvalidKey()
         {
-            var request = new RestRequest(_urlpath).AddQueryParameter("key", _invalidApiKey);
-            var response = _client.ExecuteGetAsync(request);
-            Assert.AreEqual(HttpStatusCode.Forbidden, response.Result.StatusCode);
+            test = extent.CreateTest("CheckWithInvalidKey");
+            try
+            {
+                var request = new RestRequest(_urlpath).AddQueryParameter("key", _invalidApiKey);
+                var response = _client.ExecuteGetAsync(request);
+                Assert.AreEqual(HttpStatusCode.Forbidden, response.Result.StatusCode);
+                test.Pass("Test passed");
+            }
+            catch (Exception ex)
+            {
+                test.Fail("Test failed");
+                test.Error(ex);
+            }
+
         }
 
         [Test]
 
         public void CheckWithNoKey()
         {
-            var request = new RestRequest(_urlpath).AddQueryParameter("q", "Karachi");
-            var response = _client.ExecuteGetAsync(request);
-            Assert.AreEqual(HttpStatusCode.Unauthorized, response.Result.StatusCode);
+            test = extent.CreateTest("CheckWithNoKey");
+            try
+            {
+                var request = new RestRequest(_urlpath).AddQueryParameter("q", "Karachi");
+                var response = _client.ExecuteGetAsync(request);
+                Assert.AreEqual(HttpStatusCode.Unauthorized, response.Result.StatusCode);
+                test.Pass("Test passed");
+            }
+            catch(Exception ex)
+            {
+                test.Fail("Test failed");
+                test.Error(ex);
+            }
+
         }
+        [OneTimeTearDown]
+        public void CloseReport()
+        {
+            extent.Flush();
+        }
+
 
 
     }
 }
+
+
+
+
+
+
+

@@ -1,0 +1,9 @@
+Weather API Test Report
+------------------------------------
+
+Test Results:
+
+Summary:
+Total Tests: 0
+Passed: 0
+Failed: 0
